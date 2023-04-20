@@ -3,32 +3,33 @@ import { Inter } from "next/font/google";
 import styles from "@/styles/Home.module.css";
 import { useRouter } from "next/router";
 import { database } from "../../firebaseConfig";
-import { addDoc, collection, getDoc, getDocs } from "firebase/firestore";
+import { addDoc, collection, getDoc, getDocs , doc , updateDoc, deleteDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] }); 
-
 export default function Home() {
 
   const databaseRef = collection(database , 'CRUD Data');
+  const [ Id , setId] = useState(null);
   const [ name , setName ] = useState('');
   const [ age , setAge ] = useState(null);
+  const [isUpdated , setIsUpdated] = useState(false);
   const [ fireData , setFireData ] = useState([]);
 
   const router = useRouter();
 
   useEffect(() => {
     let token = sessionStorage.getItem("Token");
-
+    
     if(token){
        getData();
     }
-
+    
     if (!token) {
       router.push("/register");
     }
-  });
 
+  }, []);
 
   const addData = () => { 
      addDoc(databaseRef , {
@@ -36,6 +37,7 @@ export default function Home() {
          age : Number(age)
      }).then(() => { 
          alert('Data send');
+         getData()
          setName('')
          setAge(null)
      })
@@ -53,6 +55,52 @@ export default function Home() {
      })
   }
 
+  const updateData = () => {
+       const fieldEdit =  doc(database , 'CRUD Data' , Id);
+       updateDoc(fieldEdit , {
+           name : name,
+           age : age
+       })
+       .then(() => {
+          alert('Data Updated');
+          getData();
+          setName('');
+          setAge(null);
+          isUpdated(false);
+       }).catch((err) => {
+           console.log(err);
+       })
+
+  }
+
+  const deleteData = (id) => {
+    const fieldDelete =  doc(database , 'CRUD Data' , id);
+    deleteDoc(fieldDelete)
+    .then(() => {
+      alert('Data Deleted')
+      getData();
+    })
+    .catch((err) => {
+       alert('Can not Delete the Filed');
+    })
+  }
+
+  const logout = () => {
+    sessionStorage.removeItem('Token')
+    router.push('/register')
+  }
+
+  const getId = (id , name , age) => {
+    console.log('age: ', age);
+    console.log('name: ', name);
+    console.log('id: ', id);
+
+       setId(id);
+       setName(name);
+       setAge(age);
+       setIsUpdated(true);
+  }
+
   return (
     <>
       <div className={styles.container}>
@@ -64,7 +112,7 @@ export default function Home() {
 
         <main className={styles.main}>
           <div>
-            <button>Log Out</button>
+            <button onClick={logout}>Log Out</button>
           </div>
           <h1>Home</h1>
 
@@ -83,7 +131,11 @@ export default function Home() {
             onChange={(e) => setAge(e.target.value)}
           />
 
-          <button className={styles.button} onClick={addData} >ADD</button>
+          {
+              isUpdated ? <button className={styles.button} onClick={updateData} >Update</button>  :  <button className={styles.button} onClick={addData} >ADD</button>
+          }
+
+          
 
         <div>
             {
@@ -93,6 +145,8 @@ export default function Home() {
                    <div className={styles.flex}>
                         <h3>Name : {data.name}</h3>
                         <p>Age : {data.age}</p>
+                        <button className={styles.button} onClick={() => getId(data.id , data.name , data.age)}>Update</button>
+                        <button className={styles.button} onClick={() => deleteData(data.id)} >Delete</button>
                    </div>
                   </>
                  )
